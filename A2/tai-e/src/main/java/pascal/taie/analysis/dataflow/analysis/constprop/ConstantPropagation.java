@@ -100,11 +100,10 @@ public class ConstantPropagation extends
     @Override
     public boolean transferNode(Stmt stmt, CPFact in, CPFact out) {
         // TODO - finish me
-        boolean change = false;
-        in.forEach(out::update);
+        boolean change = out.copyFrom(in);
         if (stmt.getDef().isPresent() && stmt.getDef().get() instanceof Var var && canHoldInt(var)) {
             if (stmt instanceof DefinitionStmt definitionStmt) {
-                change = out.update(var, evaluate(definitionStmt.getRValue(), in));
+                change |= out.update(var, evaluate(definitionStmt.getRValue(), in));
             }
         }
         return change;

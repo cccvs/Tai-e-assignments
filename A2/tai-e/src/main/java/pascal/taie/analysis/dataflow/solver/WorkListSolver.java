@@ -47,12 +47,12 @@ class WorkListSolver<Node, Fact> extends Solver<Node, Fact> {
         // while loop
         while (!workList.isEmpty()) {
             Node node = workList.iterator().next();
-            workList.remove(node);
             Fact out = result.getOutFact(node);
             Fact in = result.getInFact(node);
             for (Node pred : cfg.getPredsOf(node)) {
                 analysis.meetInto(result.getOutFact(pred), in);
             }
+            workList.remove(node);
             if (analysis.transferNode(node, in, out)) {
                 workList.addAll(cfg.getSuccsOf(node));
             }
