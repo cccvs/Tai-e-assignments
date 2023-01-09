@@ -103,8 +103,8 @@ public class ConstantPropagation extends
         boolean change = false;
         in.forEach(out::update);
         if (stmt.getDef().isPresent() && stmt.getDef().get() instanceof Var var && canHoldInt(var)) {
-            for (RValue use : stmt.getUses()) {
-                change = change || out.update(var, evaluate(use, in));
+            if (stmt instanceof DefinitionStmt definitionStmt) {
+                change = out.update(var, evaluate(definitionStmt.getRValue(), in));
             }
         }
         return change;
