@@ -88,6 +88,10 @@ public abstract class Solver<Node, Fact> {
                 result.setInFact(node, analysis.newInitialFact());
             }
         }
+        // out set
+        for (Node node : cfg) {
+            result.setOutFact(node, analysis.newInitialFact());
+        }
     }
 
     /**
