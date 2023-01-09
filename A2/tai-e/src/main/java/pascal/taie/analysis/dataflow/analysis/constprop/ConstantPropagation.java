@@ -51,22 +51,10 @@ public class ConstantPropagation extends
     public CPFact newBoundaryFact(CFG<Stmt> cfg) {
         // TODO - finish me
         CPFact boundaryFact = new CPFact();
-        for (Stmt stmt : cfg) {
-            if (stmt.getDef().isPresent() && stmt.getDef().get() instanceof Var var && canHoldInt(var)) {
-                boundaryFact.update(var, Value.getNAC());
-            }
-            for (RValue use : stmt.getUses()) {
-                if (use instanceof Var var && canHoldInt(var)) {
-                    boundaryFact.update(var, Value.getNAC());
-                } else if (use instanceof BinaryExp binaryExp) {
-                    if (canHoldInt(binaryExp.getOperand1())) {
-                        boundaryFact.update(binaryExp.getOperand1(), Value.getNAC());
-                    }
-                    if (canHoldInt(binaryExp.getOperand2())) {
-                        boundaryFact.update(binaryExp.getOperand2(), Value.getNAC());
-                    }
-                }
-                // intLiteral or others, no need to add
+        IR ir = cfg.getIR();
+        for (Var param : ir.getParams()) {
+            if (canHoldInt(param)) {
+                boundaryFact.update(param, Value.getNAC());
             }
         }
         return boundaryFact;
@@ -113,6 +101,7 @@ public class ConstantPropagation extends
     public boolean transferNode(Stmt stmt, CPFact in, CPFact out) {
         // TODO - finish me
         boolean change = false;
+        in.forEach(out::update);
         if (stmt.getDef().isPresent() && stmt.getDef().get() instanceof Var var && canHoldInt(var)) {
             for (RValue use : stmt.getUses()) {
                 change = change || out.update(var, evaluate(use, in));

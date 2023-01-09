@@ -26,7 +26,7 @@ import pascal.taie.analysis.dataflow.analysis.DataflowAnalysis;
 import pascal.taie.analysis.dataflow.fact.DataflowResult;
 import pascal.taie.analysis.graph.cfg.CFG;
 
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 class WorkListSolver<Node, Fact> extends Solver<Node, Fact> {
@@ -40,7 +40,7 @@ class WorkListSolver<Node, Fact> extends Solver<Node, Fact> {
         // TODO - finish me
         initializeForward(cfg, result);
         // workList <- all basic blocks
-        Set<Node> workList = new HashSet<>();
+        Set<Node> workList = new LinkedHashSet<>();
         for (Node node : cfg) {
             workList.add(node);
         }
