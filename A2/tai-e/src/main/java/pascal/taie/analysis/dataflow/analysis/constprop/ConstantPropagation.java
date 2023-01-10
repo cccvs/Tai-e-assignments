@@ -100,13 +100,14 @@ public class ConstantPropagation extends
     @Override
     public boolean transferNode(Stmt stmt, CPFact in, CPFact out) {
         // TODO - finish me
-        boolean change = out.copyFrom(in);
-        if (stmt.getDef().isPresent() && stmt.getDef().get() instanceof Var var && canHoldInt(var)) {
-            if (stmt instanceof DefinitionStmt definitionStmt) {
-                change |= out.update(var, evaluate(definitionStmt.getRValue(), in));
+        CPFact copy = out.copy();
+        out.copyFrom(in);
+        if (stmt instanceof DefinitionStmt definitionStmt) {
+            if (definitionStmt.getLValue() instanceof Var var && canHoldInt(var)) {
+                out.update(var, evaluate(definitionStmt.getRValue(), in));
             }
         }
-        return change;
+        return !out.equals(copy);
     }
 
     /**
@@ -144,6 +145,13 @@ public class ConstantPropagation extends
             if (canHoldInt(binaryExp.getOperand1()) && canHoldInt(binaryExp.getOperand2())) {
                 Value v1 = in.get(binaryExp.getOperand1());
                 Value v2 = in.get(binaryExp.getOperand2());
+                // div 0
+                if (binaryExp.getOperator().equals(ArithmeticExp.Op.DIV) || binaryExp.getOperator().equals(ArithmeticExp.Op.REM)) {
+                    if (v2.isConstant() && v2.getConstant() == 0) {
+                        return Value.getUndef();
+                    }
+                }
+                // normal
                 if (v1.isConstant() && v2.isConstant()) {
                     if (exp instanceof ArithmeticExp arithmeticExp) {
                         return switch (arithmeticExp.getOperator()) {
