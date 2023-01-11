@@ -40,14 +40,9 @@ import pascal.taie.ir.exp.FieldAccess;
 import pascal.taie.ir.exp.NewExp;
 import pascal.taie.ir.exp.RValue;
 import pascal.taie.ir.exp.Var;
-import pascal.taie.ir.stmt.AssignStmt;
-import pascal.taie.ir.stmt.If;
-import pascal.taie.ir.stmt.Stmt;
-import pascal.taie.ir.stmt.SwitchStmt;
+import pascal.taie.ir.stmt.*;
 
-import java.util.Comparator;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 
 public class DeadCodeDetection extends MethodAnalysis {
 
@@ -70,6 +65,59 @@ public class DeadCodeDetection extends MethodAnalysis {
         // keep statements (dead code) sorted in the resulting set
         Set<Stmt> deadCode = new TreeSet<>(Comparator.comparing(Stmt::getIndex));
         // TODO - finish me
+        // unreachable detect
+        Set<Stmt> reachable = new HashSet<>();
+        Queue<Stmt> bfsQueue = new LinkedList<>();
+        reachable.add(cfg.getEntry());
+        bfsQueue.add(cfg.getEntry());
+        while (!bfsQueue.isEmpty()) {
+            Stmt stmt = bfsQueue.remove();
+            CPFact inConstant = constants.getInFact(stmt);
+            if (stmt instanceof If ifStmt) {
+                Value value = ConstantPropagation.evaluate(ifStmt.getCondition(), inConstant);
+                for (Edge<Stmt> edge : cfg.getOutEdgesOf(ifStmt)) {
+                    if (reachable.contains(edge.getTarget())
+                            || value.isConstant() && value.getConstant() != 0
+                            && edge.getKind().equals(Edge.Kind.IF_FALSE)
+                            || value.isConstant() && value.getConstant() == 0
+                            && edge.getKind().equals(Edge.Kind.IF_TRUE)) {
+                        continue;
+                    }
+                    reachable.add(edge.getTarget());
+                    bfsQueue.add(edge.getTarget());
+                }
+            } else if (stmt instanceof SwitchStmt switchStmt) {
+                Value value = ConstantPropagation.evaluate(switchStmt.getVar(), inConstant);
+                for (Edge<Stmt> edge : cfg.getOutEdgesOf(switchStmt)) {
+                    if (reachable.contains(edge.getTarget())
+                            || value.isConstant() && edge.isSwitchCase()
+                            && value.getConstant() != edge.getCaseValue()
+                            || value.isConstant() && edge.getKind().equals(Edge.Kind.SWITCH_DEFAULT)
+                            && switchStmt.getCaseValues().contains(value.getConstant())) {
+                        continue;
+                    }
+                    reachable.add(edge.getTarget());
+                    bfsQueue.add(edge.getTarget());
+                }
+            } else {
+                for (Stmt succ : cfg.getSuccsOf(stmt)) {
+                    if (!reachable.contains(succ)) {
+                        reachable.add(succ);
+                        bfsQueue.add(succ);
+                    }
+                }
+            }
+        }
+        // not live var and dead code
+        for (Stmt stmt : cfg) {
+            // ? 为什么会删除return这些的语句  TODO bug??
+            if (stmt instanceof DefinitionStmt ds && hasNoSideEffect(ds.getRValue())) {
+                if (!reachable.contains(stmt) || ds.getLValue() instanceof Var var &&
+                        !liveVars.getOutFact(stmt).contains(var)) {
+                    deadCode.add(stmt);
+                }
+            }
+        }
         // Your task is to recognize dead code in ir and add it to deadCode
         return deadCode;
     }
